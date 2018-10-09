@@ -1,4 +1,4 @@
-from numpy import numpy as np
+import random
 
 
 class MaxPlayersReached(Exception):
@@ -11,6 +11,12 @@ class MinPlayersNotReached(Exception):
 
 class InvalidCell(Exception):
     pass
+
+
+mark_translator = {
+    'X': +1,
+    'O': -1
+}
 
 
 class Match(object):
@@ -46,6 +52,7 @@ class Match(object):
 
         while self.winner is None:
             self.current_player.make_a_play()
+            self.board.print_a_beautiful_board()
             if self.check_if_games_ended():
                 break
             self.toggle_current_player()
@@ -56,18 +63,18 @@ class Match(object):
         elif self.current_player == self.player2:
             self.current_player = self.player1
 
-    def mark_a_cell_on_board_for_a_player(self, player, cell):
-        if player in self.players:
-            self.board.mark_a_cell(cell, player.marker)
-
     def check_if_games_ended(self):
-        pass
+        if self.board.check_for_consecutive_three_columns(mark_translator['X']):
+            return True
+        if self.board.check_for_consecutive_three_columns(mark_translator['O']):
+            return True
+        return False
 
 
 class Player(object):
 
     @classmethod
-    def create_a_new(cls, name):
+    def create_a_new(cls, name, marker):
         raise NotImplemented
 
     def __init__(self, name, marker):
@@ -83,24 +90,36 @@ class Player(object):
 class HumanPlayer(Player):
 
     @classmethod
-    def create_a_new(cls, name):
-        return cls(name)
+    def create_a_new(cls, name, marker):
+        return cls(name, marker)
 
     def make_a_play(self):
-        cell_to_be_checked = input('Pass the x, y cell you want to check, ex: 1, 2:')
-        if any(item > 2 or item < 0 for item in cell_to_be_checked):
-            raise InvalidCell('Cannot make this play because the cell given does not exists')
-        self.current_match.mark_a_cell_on_board_for_a_player(cell_to_be_checked, self)
+        play_concluded = False
+
+        while play_concluded is False:
+            try:
+                cell_to_be_checked = input('Pass the x, y cell you want to check, ex: 1, 2:')
+                self.current_match.board.mark_a_cell(cell_to_be_checked, self.marker)
+                play_concluded = True
+            except InvalidCell:
+                pass
 
 
-class MachinePlayer(object):
+class MachinePlayer(Player):
 
     @classmethod
-    def create_a_new(cls, name):
-        return cls(name)
+    def create_a_new(cls, name, marker):
+        return cls(name, marker)
 
     def make_a_play(self):
-        pass
+        play_concluded = False
+        while play_concluded is False:
+            try:
+                cell = (random.randint(0, 2), random.randint(0, 2))
+                self.current_match.board.mark_a_cell(cell, self.marker)
+                play_concluded = True
+            except InvalidCell:
+                pass
 
 
 class Board(object):
@@ -110,19 +129,54 @@ class Board(object):
         return cls()
 
     def __init__(self):
-        self.cells = np.array(
-            [None, None, None],
-            [None, None, None],
-            [None, None, None])
+        self.cells = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0]]
 
     def mark_a_cell(self, cell, marker):
-        self.cells.item_set(cell, marker)
+        if self.cells[cell[0]][cell[1]] == 0:
+            self.cells[cell[0]][cell[1]] = mark_translator[marker]
+        else:
+            raise InvalidCell('Cannot make this play because the cell given does not exists')
+    
+    def check_for_consecutive_three_columns(self, cell_value):
+        win_board = [
+            [self.cells[0][0], self.cells[0][1], self.cells[0][2]],
+            [self.cells[1][0], self.cells[1][1], self.cells[1][2]],
+            [self.cells[2][0], self.cells[2][1], self.cells[2][2]],
+            [self.cells[0][0], self.cells[1][0], self.cells[2][0]],
+            [self.cells[0][1], self.cells[1][1], self.cells[2][1]],
+            [self.cells[0][2], self.cells[1][2], self.cells[2][2]],
+            [self.cells[0][0], self.cells[1][1], self.cells[2][2]],
+            [self.cells[0][0], self.cells[1][1], self.cells[2][2]],
+            [self.cells[2][0], self.cells[1][1], self.cells[0][2]],
+        ]
+        if [cell_value, cell_value, cell_value] in win_board:
+            return True
+        return False
+
+    def print_a_beautiful_board(self):
+        print('/n')
+        for index, line in enumerate(self.cells):
+            if index == 0:
+                print('_______________')
+            line_to_be_printed = '| {} | {} | {} |'.format(line[0], line[1], line[2])
+            print(line_to_be_printed)
+            if index == 2:
+                print('_______________')
+        print('/n')
 
 
-def start_menu():
-    pass
+def run():
+    match = Match.create_a_new()
+    player1 = HumanPlayer.create_a_new('Breninho', 'X')
+    player1.join_a_match(match)
+    player2 = MachinePlayer.create_a_new('Dolores', 'O')
+    player2.join_a_match(match)
+    match.start_a_new_game()
 
 
 if __name__ == "__main__":
-    start_menu()
+    run()
 
