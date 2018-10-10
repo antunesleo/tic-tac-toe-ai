@@ -118,6 +118,10 @@ class MachinePlayer(Player):
     def create_a_new(cls, name, marker):
         return cls(name, marker)
 
+    def __init__(self, name, marker):
+        super().__init__(name, marker)
+        self.counter = 0
+
     def make_a_play(self, use_ai=True):
         play_concluded = False
         while play_concluded is False:
@@ -136,9 +140,12 @@ class MachinePlayer(Player):
     def make_a_play_ai(self):
         depth = len(self.current_match.board.empty_cells)
         simulation_board = copy.deepcopy(self.current_match.board)
-        return self.minimax(simulation_board, depth, self.marker_value)
+        result = self.minimax(simulation_board, depth, self.marker_value)
+        print('number of interactions: {}'.format(self.counter))
+        return result
 
     def minimax(self, simulation_board, depth, marker_value):
+        self.counter = self.counter + 1
         if marker_value == 1:
             best = [-1, -1, -infinity]
         else:
