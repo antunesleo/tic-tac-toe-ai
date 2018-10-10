@@ -1,6 +1,7 @@
 import copy
 import random
 from math import inf as infinity
+import ai_services
 
 
 class MaxPlayersReached(Exception):
@@ -72,6 +73,13 @@ class Match(object):
             return True
         return False
 
+    def who_wins_x_or_o(self):
+        if self.board.check_for_consecutive_three_columns(mark_translator['X']):
+            return mark_translator['X']
+        if self.board.check_for_consecutive_three_columns(mark_translator['O']):
+            return mark_translator['O']
+        return 0
+
 
 class Player(object):
 
@@ -139,9 +147,8 @@ class MachinePlayer(Player):
 
     def make_a_play_ai(self):
         depth = len(self.current_match.board.empty_cells)
-        simulation_board = copy.deepcopy(self.current_match.board)
-        result = self.minimax(simulation_board, depth, self.marker_value)
-        print('number of interactions: {}'.format(self.counter))
+        simulation_match = copy.deepcopy(self.current_match)
+        result = ai_services.MinimaxService.minimax_tic_tac_toe(simulation_match, depth, self.marker_value)
         return result
 
     def minimax(self, simulation_board, depth, marker_value):
@@ -215,29 +222,6 @@ class Board(object):
         if [cell_value, cell_value, cell_value] in win_board:
             return True
         return False
-
-    def check_for_consecutive_three_columns_for_any_marker(self):
-        win_board = [
-            [self.cells[0][0], self.cells[0][1], self.cells[0][2]],
-            [self.cells[1][0], self.cells[1][1], self.cells[1][2]],
-            [self.cells[2][0], self.cells[2][1], self.cells[2][2]],
-            [self.cells[0][0], self.cells[1][0], self.cells[2][0]],
-            [self.cells[0][1], self.cells[1][1], self.cells[2][1]],
-            [self.cells[0][2], self.cells[1][2], self.cells[2][2]],
-            [self.cells[0][0], self.cells[1][1], self.cells[2][2]],
-            [self.cells[0][0], self.cells[1][1], self.cells[2][2]],
-            [self.cells[2][0], self.cells[1][1], self.cells[0][2]]
-        ]
-        if [1, 1, 1] in win_board or [-1, -1, -1] in win_board:
-            return True
-        return False
-
-    def who_wins_x_or_o(self):
-        if self.check_for_consecutive_three_columns(mark_translator['X']):
-            return mark_translator['X']
-        if self.check_for_consecutive_three_columns(mark_translator['O']):
-            return mark_translator['O']
-        return 0
 
     def print_a_beautiful_board(self):
         print('\n')
