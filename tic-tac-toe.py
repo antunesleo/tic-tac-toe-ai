@@ -1,4 +1,6 @@
+import copy
 import random
+from math import inf as infinity
 
 
 class MaxPlayersReached(Exception):
@@ -14,8 +16,8 @@ class InvalidCell(Exception):
 
 
 mark_translator = {
-    'X': +1,
-    'O': -1
+    'X': -1,
+    'O': +1
 }
 
 
@@ -77,6 +79,10 @@ class Player(object):
     def create_a_new(cls, name, marker):
         raise NotImplemented
 
+    @property
+    def marker_value(self):
+        return mark_translator[self.marker]
+
     def __init__(self, name, marker):
         self.name = name
         self.current_match = None
@@ -98,7 +104,8 @@ class HumanPlayer(Player):
 
         while play_concluded is False:
             try:
-                cell_to_be_checked = input('Pass the x, y cell you want to check, ex: 1, 2:')
+                input_cell = input('Pass the x, y cell you want to check, ex: 1, 2:  ')
+                cell_to_be_checked = tuple(int(value) for value in input_cell.split(','))
                 self.current_match.board.mark_a_cell(cell_to_be_checked, self.marker)
                 play_concluded = True
             except InvalidCell:
@@ -111,15 +118,51 @@ class MachinePlayer(Player):
     def create_a_new(cls, name, marker):
         return cls(name, marker)
 
-    def make_a_play(self):
+    def make_a_play(self, use_ai=True):
         play_concluded = False
         while play_concluded is False:
             try:
-                cell = (random.randint(0, 2), random.randint(0, 2))
-                self.current_match.board.mark_a_cell(cell, self.marker)
+                if use_ai:
+                    ai_response = self.make_a_play_ai()
+                    cell = ai_response[:-1]
+                    self.current_match.board.mark_a_cell(cell, self.marker)
+                else:
+                    cell = (random.randint(0, 2), random.randint(0, 2))
+                    self.current_match.board.mark_a_cell(cell, self.marker)
                 play_concluded = True
             except InvalidCell:
                 pass
+
+    def make_a_play_ai(self):
+        depth = len(self.current_match.board.empty_cells)
+        simulation_board = copy.deepcopy(self.current_match.board)
+        return self.minimax(simulation_board, depth, self.marker_value)
+
+    def minimax(self, simulation_board, depth, marker_value):
+        if marker_value == 1:
+            best = [-1, -1, -infinity]
+        else:
+            best = [-1, -1, +infinity]
+
+        if depth == 0 or simulation_board.check_for_consecutive_three_columns_for_any_marker():
+            score = simulation_board.who_wins_x_or_o()
+            return [-1, -1, score]
+
+        for cell in simulation_board.empty_cells:
+            x, y = cell[0], cell[1]
+            simulation_board.cells[x][y] = marker_value
+            score = self.minimax(simulation_board, depth - 1, -marker_value)
+            simulation_board.cells[x][y] = 0
+            score[0], score[1] = x, y
+
+            if marker_value == 1:
+                if score[2] > best[2]:
+                    best = score
+            else:
+                if score[2] < best[2]:
+                    best = score
+
+        return best
 
 
 class Board(object):
@@ -133,6 +176,16 @@ class Board(object):
             [0, 0, 0],
             [0, 0, 0],
             [0, 0, 0]]
+
+    @property
+    def empty_cells(self):
+        cells = []
+
+        for x, row in enumerate(self.cells):
+            for y, cell in enumerate(row):
+                if cell == 0:
+                    cells.append([x, y])
+        return cells
 
     def mark_a_cell(self, cell, marker):
         if self.cells[cell[0]][cell[1]] == 0:
@@ -150,22 +203,45 @@ class Board(object):
             [self.cells[0][2], self.cells[1][2], self.cells[2][2]],
             [self.cells[0][0], self.cells[1][1], self.cells[2][2]],
             [self.cells[0][0], self.cells[1][1], self.cells[2][2]],
-            [self.cells[2][0], self.cells[1][1], self.cells[0][2]],
+            [self.cells[2][0], self.cells[1][1], self.cells[0][2]]
         ]
         if [cell_value, cell_value, cell_value] in win_board:
             return True
         return False
 
+    def check_for_consecutive_three_columns_for_any_marker(self):
+        win_board = [
+            [self.cells[0][0], self.cells[0][1], self.cells[0][2]],
+            [self.cells[1][0], self.cells[1][1], self.cells[1][2]],
+            [self.cells[2][0], self.cells[2][1], self.cells[2][2]],
+            [self.cells[0][0], self.cells[1][0], self.cells[2][0]],
+            [self.cells[0][1], self.cells[1][1], self.cells[2][1]],
+            [self.cells[0][2], self.cells[1][2], self.cells[2][2]],
+            [self.cells[0][0], self.cells[1][1], self.cells[2][2]],
+            [self.cells[0][0], self.cells[1][1], self.cells[2][2]],
+            [self.cells[2][0], self.cells[1][1], self.cells[0][2]]
+        ]
+        if [1, 1, 1] in win_board or [-1, -1, -1] in win_board:
+            return True
+        return False
+
+    def who_wins_x_or_o(self):
+        if self.check_for_consecutive_three_columns(mark_translator['X']):
+            return mark_translator['X']
+        if self.check_for_consecutive_three_columns(mark_translator['O']):
+            return mark_translator['O']
+        return 0
+
     def print_a_beautiful_board(self):
-        print('/n')
+        print('\n')
         for index, line in enumerate(self.cells):
             if index == 0:
                 print('_______________')
             line_to_be_printed = '| {} | {} | {} |'.format(line[0], line[1], line[2])
             print(line_to_be_printed)
             if index == 2:
-                print('_______________')
-        print('/n')
+                print('--------------')
+        print('\n')
 
 
 def run():
