@@ -151,33 +151,6 @@ class MachinePlayer(Player):
         result = ai_services.MinimaxService.minimax_tic_tac_toe(simulation_match, depth, self.marker_value)
         return result
 
-    def minimax(self, simulation_board, depth, marker_value):
-        self.counter = self.counter + 1
-        if marker_value == 1:
-            best = [-1, -1, -infinity]
-        else:
-            best = [-1, -1, +infinity]
-
-        if depth == 0 or simulation_board.check_for_consecutive_three_columns_for_any_marker():
-            score = simulation_board.who_wins_x_or_o()
-            return [-1, -1, score]
-
-        for cell in simulation_board.empty_cells:
-            x, y = cell[0], cell[1]
-            simulation_board.cells[x][y] = marker_value
-            score = self.minimax(simulation_board, depth - 1, -marker_value)
-            simulation_board.cells[x][y] = 0
-            score[0], score[1] = x, y
-
-            if marker_value == 1:
-                if score[2] > best[2]:
-                    best = score
-            else:
-                if score[2] < best[2]:
-                    best = score
-
-        return best
-
 
 class Board(object):
 
