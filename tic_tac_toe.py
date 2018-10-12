@@ -32,7 +32,8 @@ class Match(object):
         self.players = []
         self.board = Board.create_a_new()
         self.current_player = None
-        self.winner = None
+        self.__winner = None
+        self.__status = 'Waiting for players'
 
     @property
     def player1(self):
@@ -41,6 +42,21 @@ class Match(object):
     @property
     def player2(self):
         return self.players[1]
+
+    @property
+    def winner(self):
+        if self.__winner is None:
+            marker_winner = None
+            if self.board.check_for_consecutive_three_columns(MARK_TRANSLATOR['X']):
+                marker_winner = 'X'
+            if self.board.check_for_consecutive_three_columns(MARK_TRANSLATOR['O']):
+                marker_winner = 'O'
+
+            if marker_winner:
+                for player in self.players:
+                    if player.marker == marker_winner:
+                        self.__winner = player
+        return self.__winner
 
     def add_a_new_player(self, player):
         if len(self.players) > 1:
@@ -51,15 +67,20 @@ class Match(object):
         if len(self.players) < 2:
             raise MinPlayersNotReached('Cannot start a match because we need at least two players')
 
+        self.__status = 'Started'
+
         self.current_player = self.player1
 
-        while self.winner is None:
+        while self.__status != 'Ended':
             self.current_player.make_a_play()
             self.board.print_a_beautiful_board()
-            if self.check_if_games_ended():
-                print('THE GAME IS OVER')
-                break
+            self.update_match_status()
             self.toggle_current_player()
+
+        if self.winner:
+            return print('THE GAME IS OVER, CONGRATULATIONS {}'.format(self.winner.name))
+
+        print('THE GAME IS OVER, YOU BOTH LOOSE')
 
     def toggle_current_player(self):
         if self.current_player == self.player1:
@@ -68,11 +89,17 @@ class Match(object):
             self.current_player = self.player1
 
     def check_if_games_ended(self):
+        if len(self.board.empty_cells) == 0:
+            return True
         if self.board.check_for_consecutive_three_columns(MARK_TRANSLATOR['X']):
             return True
         if self.board.check_for_consecutive_three_columns(MARK_TRANSLATOR['O']):
             return True
         return False
+
+    def update_match_status(self):
+        if self.check_if_games_ended():
+            self.__status = 'Ended'
 
     def who_wins_x_or_o(self):
         if self.board.check_for_consecutive_three_columns(MARK_TRANSLATOR['X']):
@@ -94,7 +121,6 @@ class Player(object):
         '8': (2, 1),
         '9': (2, 2),
     }
-
 
     @classmethod
     def create_a_new(cls, name, marker):
